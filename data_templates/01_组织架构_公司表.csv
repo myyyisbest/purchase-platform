@@ -1,0 +1,12 @@
+company_code,company_name,sector_code,sector_name,unit_code,unit_name,group_code,group_name,tax_number,address,contact_person,contact_phone
+1000,示例香料股份有限公司,SC001,示例板块一,BU001,示例事业部一,GP001,示例集团,91310000XXXXXXXXXX,XX省XX市XX区XX路,示例联系人,138XXXX1234
+2000,示例食品有限公司,SC002,示例板块二,BU001,示例事业部一,GP001,示例集团,91440000XXXXXXXXXX,XX省XX市XX区XX路,示例联系人,139XXXX5678
+D230,示例科技有限公司,SC001,示例板块一,BU001,示例事业部一,GP001,示例集团,,XX省XX市,,
+D510,Example International Co., Ltd.,SC003,示例板块三,BU002,示例事业部二,GP001,示例集团,,XX Country,,
+E510,示例生物科技有限公司,SC001,示例板块一,BU001,示例事业部一,GP001,示例集团,,XX省XX市,,
+说明,,,,,,,,,,,
+"# 表名: companies（公司表）",,,,,,,,,,,
+"# 必填列: company_code, company_name",,,,,,,,,,,
+"# 层级关系: group → unit → sector → company（四级组织层级）",,,,,,,,,,,
+"# sector_code/unit_code/group_code 如果已有对应表数据可省略，导入时会自动关联",,,,,,,,,,,
+"# 编码规则: company_code 用SAP公司代码(如1000/D230)，全局唯一",,,,,,,,,,,

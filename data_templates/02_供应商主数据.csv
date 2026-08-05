@@ -1,0 +1,11 @@
+supplier_code,supplier_name,category,risk_level,contact_person,contact_phone,email,address
+SUP001,上海XX化工有限公司,非关联方,低风险,王经理,137xxxx0001,wang@xxchem.com,上海市XX区XX路100号
+SUP002,广州XX贸易有限公司,非关联方,中风险,陈总,136xxxx0002,chen@xxtrade.com,广州市天河区XX路
+SUP003,PT Indonesia Chemical,非关联方,低风险,John,+62-21-xxx,john@idchem.co.id,Jakarta Indonesia
+SUP004,深圳XX新材料有限公司,关联方,,赵经理,135xxxx0004,,深圳市南山区
+说明,,,,,,,,
+"# 表名: suppliers（供应商表）",,,,,,,,
+"# 必填列: supplier_code, supplier_name",,,,,,,,
+"# category: 关联方 / 非关联方（关联方在采购分析中会被过滤排除）",,,,,,,,
+"# risk_level: 高/中/低（可选，用于风险评估）",,,,,,,,
+"# supplier_code: 建议使用SAP供应商编号，全局唯一",,,,,,,,

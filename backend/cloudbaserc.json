@@ -1,0 +1,6 @@
+{
+  "envId": "<your-cloudbase-env-id>",
+  "cloudrun": {
+    "name": "purchase-api"
+  }
+}

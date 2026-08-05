@@ -1,0 +1,14 @@
+material_code,material_name,category,subcategory,specification,unit,description
+10005587,天然薄荷脑,原料类,天然香料,含量≥99% 食品级,KG,天然薄荷脑原料
+10012345,丙二醇,辅料类,溶剂,USP级 99.5%,KG,丙二醇溶剂
+20003456,不锈钢管 DN50,设备类,管件,304不锈钢 DN50 PN16,根,DN50不锈钢管
+30007890,电磁流量计,设备类,电仪,DN25 4-20mA HART,台,电磁流量计
+10099999,薰衣草精油,原料类,天然精油,含量≥99% 天然,KG,法国薰衣草精油
+说明,,,,,,,
+"# 表名: materials（物料表）",,,,,,,
+"# 必填列: material_code, material_name",,,,,,,
+"# category: 物料类别（原料类/辅料类/设备类/备件类等）",,,,,,,
+"# subcategory: 细分类别（天然香料/溶剂/管件/电仪等）",,,,,,,
+"# specification: 规格型号文本",,,,,,,
+"# unit: 基本计量单位（KG/根/台/个/L/米等）",,,,,,,
+"# material_code: 使用SAP物料编码，全局唯一",,,,,,,
