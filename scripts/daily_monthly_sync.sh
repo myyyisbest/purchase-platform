@@ -5,13 +5,17 @@
 # 调用后端 API /api/hana-sync/sync/monthly
 # 同步当月 + 上月 HANA 采购数据，覆盖更新 origin 与 purchase_records
 #
+# 鉴权：必须设置环境变量 CRON_API_TOKEN（或 HANA_SYNC_CRON_TOKEN），
+#       通过请求头 X-Cron-Token 传递；后端 require_admin_or_cron 校验。
+#
 # 修复记录（2026-07-27）：
 #   - 修正后端端口：41800 → 8081（41800 上无服务监听）
 #   - 修正 API 路径：/api/hana-sync/monthly → /api/hana-sync/sync/monthly
-#     （FastAPI 路由实际为 prefix=/api/hana-sync + @router.post("/sync/monthly")）
 #   - 增加同步前健康检查，端口/路由错时立即告警
 #   - 增加 HTTP 超时（max-time），避免 curl 永远挂住导致 cron 卡死
 #   - 失败时退出码非 0，便于外部监控
+# 修复记录（2026-09）：
+#   - 增加 X-Cron-Token 鉴权，修复 cron 调用 401
 # =========================================
 set -euo pipefail
 
@@ -21,6 +25,9 @@ BACKEND_PORT="8081"
 API_BASE="http://${BACKEND_HOST}:${BACKEND_PORT}"
 SYNC_URL="${API_BASE}/api/hana-sync/sync/monthly"
 HEALTH_URL="${API_BASE}/api/hana-sync/status"
+
+# Cron Token：优先 CRON_API_TOKEN，兼容 HANA_SYNC_CRON_TOKEN
+CRON_TOKEN="${CRON_API_TOKEN:-${HANA_SYNC_CRON_TOKEN:-}}"
 
 # 日志目录：可通过环境变量覆盖，默认为脚本同级目录下的 logs
 LOG_DIR="${SYNC_LOG_DIR:-$(dirname "$0")/../logs}"
@@ -41,11 +48,22 @@ log() {
 log "========== 月度定时同步开始 =========="
 log "目标: ${SYNC_URL}"
 
+# ── 0. 校验 Cron Token ──
+if [ -z "$CRON_TOKEN" ]; then
+    log "ERROR 未设置 CRON_API_TOKEN（或 HANA_SYNC_CRON_TOKEN），拒绝调用以免 401"
+    log "请在 cron 环境或 .env 中配置后重试"
+    log "========== 月度定时同步异常终止 =========="
+    echo "ERROR: CRON_API_TOKEN unset" >&2
+    exit 1
+fi
+
+AUTH_HEADER=(-H "X-Cron-Token: ${CRON_TOKEN}")
+
 # ── 1. 同步前健康检查：避免端口/路由错配时白跑 ──
-health_http=$(curl -s -o /dev/null -w "%{http_code}" -m "$HEALTH_TIMEOUT" "$HEALTH_URL" 2>/dev/null || echo "000")
+health_http=$(curl -s -o /dev/null -w "%{http_code}" -m "$HEALTH_TIMEOUT" "${AUTH_HEADER[@]}" "$HEALTH_URL" 2>/dev/null || echo "000")
 if [ "$health_http" != "200" ]; then
     log "ERROR 健康检查失败 HTTP=${health_http} (${HEALTH_URL})"
-    log "可能原因: 后端未运行 / 端口变更 / 路由变更"
+    log "可能原因: 后端未运行 / 端口变更 / 路由变更 / Cron Token 无效"
     log "========== 月度定时同步异常终止 =========="
     exit 1
 fi
@@ -55,6 +73,7 @@ log "健康检查通过 (HTTP ${health_http})"
 sync_start=$(date +%s)
 http_code=$(curl -s -o "$RESP_FILE" -w "%{http_code}" \
     -m "$CURL_TIMEOUT" \
+    "${AUTH_HEADER[@]}" \
     -X POST "$SYNC_URL" 2>> "$LOG_FILE" || echo "000")
 sync_elapsed=$(( $(date +%s) - sync_start ))
 resp_body=$(cat "$RESP_FILE" 2>/dev/null || echo "(无响应体)")

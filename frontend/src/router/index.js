@@ -79,6 +79,12 @@ const routes = [
     meta: { title: '数据导入', requiresAdmin: true }
   },
   {
+    path: '/hana-sync',
+    name: 'HanaSync',
+    component: () => import('../views/HanaSync.vue'),
+    meta: { title: 'HANA 同步', requiresAdmin: true }
+  },
+  {
     path: '/ai-assistant',
     name: 'AIAssistant',
     component: () => import('../views/AIAssistant.vue'),
