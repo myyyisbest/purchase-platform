@@ -4,7 +4,7 @@ SQLAlchemy模型定义
 
 组织层级：集团(Group) → 事业部(BusinessUnit) → 板块(BusinessSector) → 公司(Company)
 """
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, Date, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DECIMAL, Date, DateTime, Boolean, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -352,3 +352,30 @@ class PurchaseRecordOrigin(Base):
     aezet      = Column(String(10), default='')   # AEZET 修改时间
 
     created_at = Column(DateTime, default=func.now())
+
+
+class AnomalyAlert(Base):
+    """异常预警表：单源供应 / 单价波动等预警的生命周期记录"""
+    __tablename__ = "anomaly_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_type = Column(String(30), nullable=False, index=True)  # single_source | price_volatility
+    fiscal_year = Column(Integer, nullable=False, index=True)
+    material_code = Column(String(50), nullable=False, index=True)
+    material_name = Column(String(200), default='')
+    supplier_name = Column(String(200))
+    currency = Column(String(10))
+    company_scope = Column(Text)  # JSON 字符串：相关公司代码列表
+    metric_value = Column(Float)
+    threshold = Column(Float)
+    severity = Column(String(10), default='medium')  # high | medium | low
+    status = Column(String(20), nullable=False, default='open', index=True)  # open | acknowledged | resolved
+    title = Column(String(300), nullable=False, default='')
+    detail = Column(Text)  # JSON 或文本详情
+    fingerprint = Column(String(200), unique=True, nullable=False, index=True)
+    acknowledged_by = Column(String(50))
+    acknowledged_at = Column(DateTime)
+    resolved_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
