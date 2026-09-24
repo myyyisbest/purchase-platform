@@ -842,6 +842,14 @@ class DashboardService:
                 fiscal_year=fiscal_year, company_codes=company_codes,
                 material_code=material_code, material_keyword=material_keyword, major_category=major_category,
             ),
+            "purpose_distribution": self.get_purpose_distribution(
+                fiscal_year=fiscal_year, company_name=company_name, company_codes=company_codes,
+                material_code=material_code, material_keyword=material_keyword, major_category=major_category,
+            ),
+            "company_month_matrix": self.get_company_month_matrix(
+                fiscal_year=fiscal_year, company_name=company_name, company_codes=company_codes,
+                material_code=material_code, material_keyword=material_keyword, major_category=major_category,
+            ),
         }
 
     def search_materials_from_records(

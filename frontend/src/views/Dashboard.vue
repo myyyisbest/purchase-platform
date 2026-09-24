@@ -151,6 +151,29 @@
       </el-col>
     </el-row>
 
+
+    <!-- 采购用途 + 公司月度热力图 -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24" :lg="10">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>采购用途分布（CNY）</h3>
+            <span class="sub">purchase_purpose</span>
+          </div>
+          <v-chart :option="purposeOption" autoresize style="height: 400px" />
+        </div>
+      </el-col>
+      <el-col :xs="24" :lg="14">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>公司 × 月度热力图（CNY）</h3>
+            <span class="sub">金额深浅表示采购规模</span>
+          </div>
+          <v-chart :option="companyMonthOption" autoresize style="height: 400px" />
+        </div>
+      </el-col>
+    </el-row>
+
     <!-- 供应商下钻弹窗 -->
     <el-dialog v-model="supplierDrillVisible" :title="`供应商：${supplierDrillName} — 前十大物料`" width="700px">
       <el-table :data="supplierDrillData" stripe size="small" v-loading="supplierDrillLoading">
@@ -236,13 +259,15 @@ import { CanvasRenderer } from 'echarts/renderers'
 import {
   BarChart,
   LineChart,
-  PieChart
+  PieChart,
+  HeatmapChart
 } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  GridComponent
+  GridComponent,
+  VisualMapComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { Refresh, CaretTop, CaretBottom, DataLine, Calendar } from '@element-plus/icons-vue'
@@ -260,10 +285,12 @@ use([
   BarChart,
   LineChart,
   PieChart,
+  HeatmapChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  GridComponent
+  GridComponent,
+  VisualMapComponent
 ])
 
 const fiscalYear = ref(null)
@@ -277,6 +304,8 @@ const topSuppliers = ref([])
 const topMaterials = ref([])
 const categoryDistribution = ref([])
 const majorCategoryDistribution = ref([])
+const purposeDistribution = ref([])
+const companyMonthMatrix = ref({ companies: [], months: [], matrix: [] })
 
 // 组织下钻图所需：组织层级 + 当前用户权限公司码
 const orgHierarchyData = ref([])
@@ -349,6 +378,8 @@ async function loadData() {
     topSuppliers.value = baseRes.top_suppliers
     topMaterials.value = baseRes.top_materials
     categoryDistribution.value = baseRes.category_distribution
+    purposeDistribution.value = baseRes.purpose_distribution || []
+    companyMonthMatrix.value = baseRes.company_month_matrix || { companies: [], months: [], matrix: [] }
 
     // 加载物料大类分布（独立请求）
     try {
@@ -727,6 +758,87 @@ const materialOption = computed(() => {
     }]
   }
 })
+
+// 采购用途分布
+const purposeOption = computed(() => {
+  const data = (purposeDistribution.value || []).map(d => ({
+    name: d.purpose || '未指定',
+    value: d.amount_cny || 0,
+  }))
+  return {
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `${p.name}<br/>${formatMoney(p.value)} 元 (${p.percent}%)`
+    },
+    legend: {
+      type: 'scroll',
+      orient: 'vertical',
+      right: 5,
+      top: 40,
+      bottom: 20,
+      textStyle: { fontSize: 12 }
+    },
+    series: [{
+      name: '采购用途',
+      type: 'pie',
+      radius: ['38%', '65%'],
+      center: ['35%', '50%'],
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+      data
+    }]
+  }
+})
+
+// 公司 × 月度热力图
+const companyMonthOption = computed(() => {
+  const mat = companyMonthMatrix.value || { companies: [], months: [], matrix: [] }
+  const companies = mat.companies || []
+  const months = (mat.months || []).map(m => `${m}月`)
+  const values = (mat.matrix || []).map(cell => [
+    (cell.month || 1) - 1,
+    companies.indexOf(cell.company),
+    cell.amount_cny || 0,
+  ]).filter(d => d[1] >= 0)
+  const maxVal = values.reduce((m, d) => Math.max(m, d[2]), 0) || 1
+  return {
+    tooltip: {
+      position: 'top',
+      formatter: p => {
+        const company = companies[p.value[1]] || ''
+        const month = months[p.value[0]] || ''
+        return `${company}<br/>${month}: ${formatMoney(p.value[2])} 元`
+      }
+    },
+    grid: { left: 10, right: 40, top: 20, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: months, splitArea: { show: true } },
+    yAxis: {
+      type: 'category',
+      data: companies,
+      axisLabel: { width: 140, overflow: 'truncate', fontSize: 11 }
+    },
+    visualMap: {
+      min: 0,
+      max: maxVal,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 0,
+      inRange: { color: ['#f0f5ff', '#5470c6', '#1a3a8a'] },
+      text: ['高', '低'],
+      formatter: v => formatMoney(v)
+    },
+    series: [{
+      name: '采购金额',
+      type: 'heatmap',
+      data: values,
+      label: { show: false },
+      emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.3)' } }
+    }]
+  }
+})
+
 </script>
 
 <style scoped>
