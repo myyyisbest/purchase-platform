@@ -73,6 +73,12 @@ const routes = [
     meta: { title: '采购记录明细' }
   },
   {
+    path: '/suppliers',
+    name: 'Suppliers',
+    component: () => import('../views/Suppliers.vue'),
+    meta: { title: '供应商管理' }
+  },
+  {
     path: '/data-import',
     name: 'DataImport',
     component: () => import('../views/DataImport.vue'),

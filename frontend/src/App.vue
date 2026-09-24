@@ -44,6 +44,11 @@
               <el-icon><List /></el-icon>
               <span>采购记录明细</span>
             </el-menu-item>
+
+            <el-menu-item index="/suppliers">
+              <el-icon><Van /></el-icon>
+              <span>供应商管理</span>
+            </el-menu-item>
             
             <el-menu-item index="/material-major-category">
               <el-icon><Files /></el-icon>
@@ -125,7 +130,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { getAnomalyAlertSummary } from './api/anomalyAlert'
 import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List, Connection } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List, Connection, Van } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

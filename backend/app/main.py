@@ -138,6 +138,7 @@ from .api import user_api        # noqa: E402
 from .api import hana_sync_api   # noqa: E402
 from .api import purchase_record_api  # noqa: E402
 from .api import anomaly_alert_api  # noqa: E402
+from .api import supplier_api  # noqa: E402
 
 app.include_router(auth_api.router, prefix="/api/auth", tags=["认证"])
 app.include_router(user_api.router, prefix="/api/users", tags=["用户管理"])
@@ -152,6 +153,7 @@ app.include_router(material_major_category_api.router, prefix="/api/material-maj
 app.include_router(hana_sync_api.router, prefix="/api/hana-sync", tags=["HANA数据同步"])
 app.include_router(purchase_record_api.router, prefix="/api/purchase-records", tags=["采购记录明细"])
 app.include_router(anomaly_alert_api.router, prefix="/api/anomaly-alerts", tags=["异常预警"])
+app.include_router(supplier_api.router, prefix="/api/suppliers", tags=["供应商管理"])
 
 
 if __name__ == "__main__":
