@@ -143,6 +143,7 @@ DB_PASSWORD=<your-db-password>
 # ========== JWT 认证 ==========
 # 必须设置随机长字符串（至少16位），否则后端启动失败
 JWT_SECRET=<your-random-secret-at-least-16-chars>
+CRON_API_TOKEN=<optional-cron-token-for-hana-sync-script>
 JWT_EXPIRE_MINUTES=1440
 
 # ========== 初始账户密码 ==========
