@@ -12,6 +12,11 @@ from datetime import datetime
 class ExportService:
     """导出服务类"""
 
+    def __init__(self, db=None):
+        # db 可选：兼容历史调用 ExportService(db)，本类不依赖会话
+        self.db = db
+
+
     def generate_yoy_excel(
         self,
         items: List[dict],
@@ -120,3 +125,51 @@ class ExportService:
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
+
+    def generate_purchase_records_excel(self, items: List[dict]) -> StreamingResponse:
+        """生成采购记录明细 Excel"""
+        rows = []
+        for item in items:
+            rows.append({
+                '公司代码': item.get('company_code', ''),
+                '公司名称': item.get('company_name', ''),
+                '财年': item.get('fiscal_year'),
+                '交易日期': item.get('transaction_date') or '',
+                '供应商编号': item.get('supplier_code', ''),
+                '供应商名称': item.get('supplier_name', ''),
+                '物料代码': item.get('material_code', ''),
+                '物料名称': item.get('material_name', ''),
+                '规格型号': item.get('specification', ''),
+                '物料类别': item.get('material_category', ''),
+                '采购单位': item.get('unit', ''),
+                '采购数量': item.get('quantity'),
+                '采购单价': item.get('unit_price'),
+                '采购金额': item.get('amount'),
+                '订单货币': item.get('order_currency', ''),
+                '单价(订单货币)': item.get('order_unit_price'),
+                '金额(订单货币)': item.get('order_amount'),
+                '汇率': item.get('exchange_rate'),
+                '采购金额(CNY)': item.get('cny_amount'),
+                '采购订单': item.get('po_number', ''),
+                '物料凭证': item.get('material_doc', ''),
+                '行项目': item.get('line_item', ''),
+                '采购用途': item.get('purchase_purpose', ''),
+            })
+
+        df = pd.DataFrame(rows)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='采购记录明细')
+            ws = writer.sheets['采购记录明细']
+            for col in ws.columns:
+                letter = col[0].column_letter
+                ws.column_dimensions[letter].width = min(22, max(10, len(str(col[0].value or '')) + 4))
+
+        output.seek(0)
+        filename = f"采购记录明细_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+

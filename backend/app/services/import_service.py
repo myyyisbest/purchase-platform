@@ -105,7 +105,17 @@ class ImportService:
         - 排除供应商类别 === '关联方' 的行
         - 排除物料代码为空的行
         """
-        df = pd.read_excel(file_path)
+        # 支持 Excel 与 CSV（模板目录提供的是 CSV）
+        lower = (file_path or "").lower()
+        if lower.endswith(".csv"):
+            df = pd.read_csv(file_path)
+        else:
+            df = pd.read_excel(file_path)
+
+        # 跳过模板文件中的说明行（以 # 开头的「公司」列）
+        if "公司" in df.columns:
+            df = df[~df["公司"].astype(str).str.startswith("#")].copy()
+            df = df[df["公司"].astype(str).str.strip() != "说明"].copy()
 
         stats = {
             "total": len(df),

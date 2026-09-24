@@ -67,6 +67,18 @@ const routes = [
     meta: { title: '采购对比分析' }
   },
   {
+    path: '/purchase-records',
+    name: 'PurchaseRecords',
+    component: () => import('../views/PurchaseRecords.vue'),
+    meta: { title: '采购记录明细' }
+  },
+  {
+    path: '/data-import',
+    name: 'DataImport',
+    component: () => import('../views/DataImport.vue'),
+    meta: { title: '数据导入', requiresAdmin: true }
+  },
+  {
     path: '/ai-assistant',
     name: 'AIAssistant',
     component: () => import('../views/AIAssistant.vue'),
