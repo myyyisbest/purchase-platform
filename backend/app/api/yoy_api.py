@@ -60,6 +60,7 @@ def get_available_materials(
 def analyze(
     current_year: int = Query(..., description="当年年份，如2026"),
     period: int = Query(..., ge=1, le=12, description="截止月份(1-12)"),
+    compare_mode: str = Query("same_period", pattern="^(same_period|full_year)$", description="对比口径：same_period=上年同期 / full_year=上年全年"),
     company_name: Optional[str] = Query(None, description="筛选公司名称"),
     company_codes: Optional[List[str]] = Query(None, description="公司代码列表（多选用这个，优先级高于 company_name）"),
     material_name: Optional[str] = Query(None, description="筛选物料名称(模糊搜索)"),
@@ -75,7 +76,7 @@ def analyze(
     采购同期对比分析
 
     当年：累计1月到指定月份的采购数据
-    上年：全年1月到12月的采购数据
+    上年：默认 same_period（1~N月同期）；可选 full_year（全年）
     分组维度：物料 + 公司
     """
     service = YoYAnalysisService(db)
@@ -101,7 +102,8 @@ def analyze(
         material_code=material_code,
         major_category=major_category,
         page=page,
-        page_size=page_size
+        page_size=page_size,
+        compare_mode=compare_mode,
     )
 
     return {"code": 200, "data": result}
@@ -111,6 +113,7 @@ def analyze(
 def export_analysis(
     current_year: int = Query(..., description="当年年份"),
     period: int = Query(..., ge=1, le=12, description="截止月份"),
+    compare_mode: str = Query("same_period", pattern="^(same_period|full_year)$"),
     company_name: Optional[str] = Query(None, description="筛选公司名称"),
     company_codes: Optional[List[str]] = Query(None, description="公司代码列表"),
     material_name: Optional[str] = Query(None, description="筛选物料名称"),
@@ -133,11 +136,13 @@ def export_analysis(
         company_codes=effective_codes,
         material_name=material_name or material_keyword,
         major_category=major_category,
+        compare_mode=compare_mode,
     )
 
     return export_service.generate_yoy_excel(
         items=items,
         current_year=current_year,
         period=period,
-        company_name=company_name
+        company_name=company_name,
+        compare_mode=compare_mode,
     )

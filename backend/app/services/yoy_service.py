@@ -1,6 +1,6 @@
 """
 采购同期对比分析服务
-实现当年累计 vs 上年全年的对比分析逻辑
+实现当年累计 vs 上年同期（默认）/ 上年全年 的对比分析逻辑
 参考 purchase analysis 项目的 analyze() 函数
 """
 from sqlalchemy.orm import Session
@@ -111,18 +111,20 @@ class YoYAnalysisService:
         material_code: Optional[str] = None,
         major_category: Optional[str] = None,
         page: int = 1,
-        page_size: int = 50
+        page_size: int = 50,
+        compare_mode: str = "same_period",  # same_period | full_year
     ) -> dict:
         """
         采购同期对比分析
 
-        逻辑（参考 purchase analysis 项目）：
+        逻辑：
         - 当年：累计1月~N月的采购数据
-        - 上年：全年1月~12月的采购数据
+        - 上年（默认 same_period）：同样过滤 1月~N月，保证可比
+        - 上年（full_year）：全年1月~12月（兼容旧口径，需显式指定）
         - 分组维度：物料代码 + 公司代码
         - 计算指标：
           - 当年平均单价 = 当年CNY金额累计 / 当年采购量累计
-          - 上年全年平均单价 = 上年CNY金额累计 / 上年采购量累计
+          - 上年平均单价 = 上年CNY金额累计 / 上年采购量累计
           - 单价变动 = 当年单价 - 上年单价
           - 变动率 = (当年单价 - 上年单价) / 上年单价 × 100%
           - 成本变动 = 单价变动 × 当年采购量
@@ -174,7 +176,9 @@ class YoYAnalysisService:
             PurchaseRecord.material_name
         ).all()
 
-        # 上年数据：全年累计
+        # 上年数据：默认同期（1~N月）；full_year 则全年
+        if compare_mode not in ("same_period", "full_year"):
+            compare_mode = "same_period"
         prev_filters = list(base_filters)
         prev_query = self.db.query(
             PurchaseRecord.company_code,
@@ -187,6 +191,10 @@ class YoYAnalysisService:
             PurchaseRecord.material_code.isnot(None),
             *prev_filters
         )
+        if compare_mode == "same_period":
+            prev_query = prev_query.filter(
+                extract('month', PurchaseRecord.transaction_date) <= period
+            )
 
         if material_name:
             pattern = f"%{material_name}%"
@@ -274,6 +282,7 @@ class YoYAnalysisService:
             'current_year': current_year,
             'prev_year': prev_year,
             'period': period,
+            'compare_mode': compare_mode,
             'company_name': company_name,
             'material_name': material_name,
             'summary': {
@@ -305,6 +314,7 @@ class YoYAnalysisService:
         material_name: Optional[str] = None,
         material_code: Optional[str] = None,
         major_category: Optional[str] = None,
+        compare_mode: str = "same_period",
     ) -> list:
         """导出全部分析结果（不分页）"""
         result = self.analyze(
@@ -315,6 +325,7 @@ class YoYAnalysisService:
             material_name=material_name,
             material_code=material_code,
             major_category=major_category,
+            compare_mode=compare_mode,
             page=1,
             page_size=999999  # 取全部数据
         )
