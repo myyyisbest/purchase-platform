@@ -86,6 +86,11 @@
                 <el-icon><Connection /></el-icon>
                 <span>HANA 同步</span>
               </el-menu-item>
+
+              <el-menu-item index="/audit-logs">
+                <el-icon><Document /></el-icon>
+                <span>审计日志</span>
+              </el-menu-item>
             </template>
           </el-menu>
         </el-aside>
@@ -130,7 +135,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { getAnomalyAlertSummary } from './api/anomalyAlert'
 import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List, Connection, Van } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List, Connection, Van, Document } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

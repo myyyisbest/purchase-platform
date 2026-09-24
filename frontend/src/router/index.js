@@ -91,6 +91,12 @@ const routes = [
     meta: { title: 'HANA 同步', requiresAdmin: true }
   },
   {
+    path: '/audit-logs',
+    name: 'AuditLogs',
+    component: () => import('../views/AuditLogs.vue'),
+    meta: { title: '审计日志', requiresAdmin: true }
+  },
+  {
     path: '/ai-assistant',
     name: 'AIAssistant',
     component: () => import('../views/AIAssistant.vue'),
