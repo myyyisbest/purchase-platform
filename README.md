@@ -183,6 +183,15 @@ LOG_DIR=./logs
 
 ## 使用
 
+### HANA 定时同步（可选）
+
+1. 在 `backend/.env` 配置 `CRON_API_TOKEN`（与 JWT 无关的独立密钥）
+2. cron 环境导出同一变量后执行 `scripts/daily_monthly_sync.sh`
+3. 脚本通过请求头 `X-Cron-Token` 调用 `/api/hana-sync/status` 与 `/sync/monthly`
+4. 未配置 Token 时脚本直接失败退出；JWT 管理员仍可通过「HANA 同步」页面手动触发
+
+
+
 ### 1. 初始化数据库
 
 首次运行时，后端会自动创建数据表并初始化 admin 账户。如需预置示例数据，可执行 SQL 脚本：

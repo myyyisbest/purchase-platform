@@ -269,7 +269,7 @@ html, body, #app {
 .menu-badge {
   margin-left: 8px;
 }
-.menu-badge :deep(.el-badge__content) {
+.menu-badge ::v-deep(.el-badge__content) {
   transform: translateY(-2px);
 }
 </style>
