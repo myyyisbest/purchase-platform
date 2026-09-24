@@ -21,6 +21,7 @@
           @change="onMaterialFilterChange"
         />
         <el-button type="primary" :icon="Refresh" @click="loadData" :loading="loading">刷新数据</el-button>
+        <el-button type="success" plain @click="goPurchaseRecords">查看采购明细</el-button>
       </div>
     </div>
 
@@ -227,7 +228,9 @@
 </template>
 
 <script setup>
+const router = useRouter()
 import { ref, computed, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import {
@@ -359,6 +362,16 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+
+function goPurchaseRecords() {
+  const query = {}
+  if (fiscalYear.value) query.fiscal_year = String(fiscalYear.value)
+  if (orgFilter.companyCodes?.length) query.company_codes = orgFilter.companyCodes.join(',')
+  if (materialFilter.materialCode) query.material_code = materialFilter.materialCode
+  else if (materialFilter.materialKeyword) query.material_keyword = materialFilter.materialKeyword
+  router.push({ path: '/purchase-records', query })
 }
 
 onMounted(async () => {

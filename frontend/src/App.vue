@@ -38,6 +38,11 @@
               <el-icon><DataAnalysis /></el-icon>
               <span>采购对比分析</span>
             </el-menu-item>
+
+            <el-menu-item index="/purchase-records">
+              <el-icon><List /></el-icon>
+              <span>采购记录明细</span>
+            </el-menu-item>
             
             <el-menu-item index="/material-major-category">
               <el-icon><Files /></el-icon>
@@ -64,6 +69,11 @@
               <el-menu-item index="/user-management">
                 <el-icon><UserFilled /></el-icon>
                 <span>用户与权限管理</span>
+              </el-menu-item>
+
+              <el-menu-item index="/data-import">
+                <el-icon><Upload /></el-icon>
+                <span>数据导入</span>
               </el-menu-item>
             </template>
           </el-menu>
@@ -108,7 +118,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

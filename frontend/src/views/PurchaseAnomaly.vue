@@ -38,7 +38,9 @@
       <el-table :data="singleSourceRisk" stripe size="small" max-height="420" v-loading="singleSourceLoading">
         <el-table-column type="index" label="#" width="50" align="center" />
         <el-table-column label="物料编码" width="120">
-          <template #default="{ row }">{{ stripLeadingZeros(row.material_code) }}</template>
+          <template #default="{ row }">
+            <el-link type="primary" @click="goRecordsByMaterial(row.material_code)">{{ stripLeadingZeros(row.material_code) }}</el-link>
+          </template>
         </el-table-column>
         <el-table-column prop="material_name" label="物料名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="supplier_name" label="唯一供应商" min-width="200" show-overflow-tooltip />
@@ -120,7 +122,9 @@
 </template>
 
 <script setup>
+const router = useRouter()
 import { ref, computed, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Refresh, CaretTop, CaretBottom, Download, Warning } from '@element-plus/icons-vue'
 import { getYears } from '../api/yoy'
 import { getSingleSourceRisk, getPriceVolatility } from '../api/dashboard'
@@ -209,6 +213,14 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+
+function goRecordsByMaterial(materialCode) {
+  const query = { material_code: materialCode }
+  if (fiscalYear.value) query.fiscal_year = String(fiscalYear.value)
+  if (orgFilter.companyCodes?.length) query.company_codes = orgFilter.companyCodes.join(',')
+  router.push({ path: '/purchase-records', query })
 }
 
 onMounted(async () => {

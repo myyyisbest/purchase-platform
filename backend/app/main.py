@@ -136,6 +136,7 @@ from .api import material_major_category_api  # noqa: E402
 from .api import auth_api        # noqa: E402
 from .api import user_api        # noqa: E402
 from .api import hana_sync_api   # noqa: E402
+from .api import purchase_record_api  # noqa: E402
 
 app.include_router(auth_api.router, prefix="/api/auth", tags=["认证"])
 app.include_router(user_api.router, prefix="/api/users", tags=["用户管理"])
@@ -148,6 +149,7 @@ app.include_router(ai_api.router, prefix="/api/ai", tags=["AI助手"])
 app.include_router(price_trend_api.router, prefix="/api/price-trend", tags=["物料单价趋势"])
 app.include_router(material_major_category_api.router, prefix="/api/material-major-categories", tags=["物料大类维护"])
 app.include_router(hana_sync_api.router, prefix="/api/hana-sync", tags=["HANA数据同步"])
+app.include_router(purchase_record_api.router, prefix="/api/purchase-records", tags=["采购记录明细"])
 
 
 if __name__ == "__main__":
