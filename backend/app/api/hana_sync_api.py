@@ -5,14 +5,14 @@ HANA 数据同步 API
 - GET  /status          连接配置信息
 - GET  /state           最近一次同步状态
 
-鉴权策略：全部 admin only（同步会改动核心数据，且 /status 会泄露内网连接信息）
+鉴权策略：JWT admin 或 X-Cron-Token / Bearer Cron Token（CRON_API_TOKEN）
 """
 import logging
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..auth import require_admin
+from ..auth import require_admin, require_admin_or_cron
 from ..models import User
 from ..services.hana_sync_service import HanaSyncService
 from ..hana_client import HANA_HOST, HANA_PORT, HANA_USER, HANA_VIEW_NAME
@@ -26,7 +26,7 @@ router = APIRouter()
 def trigger_hana_sync(
     mode: str = Query("full", pattern="^(full|incremental|monthly)$"),
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _ = Depends(require_admin_or_cron),
 ):
     """
     触发 HANA 数据同步
@@ -62,7 +62,7 @@ def trigger_hana_sync(
 @router.post("/sync/monthly")
 def trigger_monthly_sync(
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _ = Depends(require_admin_or_cron),
 ):
     """
     月度定时同步（供 cron 每日凌晨 2 点调用）。
@@ -88,7 +88,7 @@ def trigger_monthly_sync(
 
 
 @router.get("/status")
-def hana_sync_status(_: User = Depends(require_admin)):
+def hana_sync_status(_ = Depends(require_admin_or_cron)):
     """查看 HANA 连接配置信息（不含密码）"""
     return {
         "code": 200,
@@ -105,7 +105,7 @@ def hana_sync_status(_: User = Depends(require_admin)):
 @router.get("/state")
 def hana_sync_last_state(
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _ = Depends(require_admin_or_cron),
 ):
     """查看最近一次 HANA 同步状态"""
     state = HanaSyncService.get_last_sync_state(db)

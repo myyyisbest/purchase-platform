@@ -258,6 +258,47 @@ def search_materials(
     )
 
 
+
+
+@router.get("/purpose-distribution")
+def get_purpose_distribution(
+    fiscal_year: FiscalYear = None,
+    company_name: CompanyName = None,
+    company_codes: CompanyCodes = None,
+    material_code: MaterialCode = None,
+    material_keyword: MaterialKeyword = None,
+    major_category: MajorCategory = None,
+    current_user: CurrentUser = None,
+    db: DbSession = None,
+):
+    """采购用途分布"""
+    return DashboardService(db).get_purpose_distribution(
+        fiscal_year=fiscal_year, company_name=company_name or None,
+        company_codes=_resolve(current_user, company_codes, db),
+        material_code=material_code or None, material_keyword=material_keyword or None,
+        major_category=major_category or None,
+    )
+
+
+@router.get("/company-month-matrix")
+def get_company_month_matrix(
+    fiscal_year: FiscalYear = None,
+    company_name: CompanyName = None,
+    company_codes: CompanyCodes = None,
+    material_code: MaterialCode = None,
+    material_keyword: MaterialKeyword = None,
+    major_category: MajorCategory = None,
+    current_user: CurrentUser = None,
+    db: DbSession = None,
+):
+    """公司 × 月度 采购金额热力图矩阵"""
+    return DashboardService(db).get_company_month_matrix(
+        fiscal_year=fiscal_year, company_name=company_name or None,
+        company_codes=_resolve(current_user, company_codes, db),
+        material_code=material_code or None, material_keyword=material_keyword or None,
+        major_category=major_category or None,
+    )
+
 @router.get("/full")
 def get_full_dashboard(
     fiscal_year: FiscalYear = None,

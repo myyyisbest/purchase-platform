@@ -15,6 +15,13 @@
             <el-option v-for="m in 12" :key="m" :label="m + '月'" :value="m" />
           </el-select>
         </div>
+        <div class="filter-item">
+          <label class="filter-label">对比口径</label>
+          <el-select v-model="compareMode" style="width: 160px">
+            <el-option label="上年同期(1-N月)" value="same_period" />
+            <el-option label="上年全年" value="full_year" />
+          </el-select>
+        </div>
         <OrgFilter ref="orgFilterRef" @change="onOrgFilterChange" />
         <MaterialFilter
           :company-codes="orgFilter.companyCodes"
@@ -40,7 +47,7 @@
         <div class="summary-value">{{ formatMoney(summary.total_current_amount) }}</div>
       </el-card>
       <el-card class="summary-card prev" shadow="never">
-        <div class="summary-title">{{ currentYear - 1 }}年全年金额(CNY)</div>
+        <div class="summary-title">{{ prevPeriodLabel }}金额(CNY)</div>
         <div class="summary-value">{{ formatMoney(summary.total_prev_amount) }}</div>
       </el-card>
       <el-card class="summary-card comparable" shadow="never">
@@ -79,7 +86,7 @@
               <th class="fixed-col" rowspan="2">物料代码</th>
               <th class="fixed-col" rowspan="2">物料名称</th>
               <th class="current-group" colspan="3">{{ currentYear }}年1-{{ period }}月累计</th>
-              <th class="prev-group" colspan="3">{{ currentYear - 1 }}年全年</th>
+              <th class="prev-group" colspan="3">{{ prevPeriodLabel }}</th>
               <th class="diff-group" colspan="3">同比分析</th>
             </tr>
             <!-- 第二行：具体列标题 -->
@@ -156,6 +163,11 @@ import { stripLeadingZeros } from '../utils/format'
 const years = ref([])
 const currentYear = ref(2026)
 const period = ref(5)
+const compareMode = ref('same_period')
+const prevPeriodLabel = computed(() => {
+  if (compareMode.value === 'full_year') return `${currentYear.value - 1}年全年`
+  return `${currentYear.value - 1}年同期(1-${period.value}月)`
+})
 const loading = ref(false)
 const exporting = ref(false)
 const searchText = ref('')
@@ -235,6 +247,7 @@ async function doAnalyze() {
     const params = {
       current_year: currentYear.value,
       period: period.value,
+      compare_mode: compareMode.value,
       company_codes: orgFilter.companyCodes.length > 0 ? orgFilter.companyCodes : undefined,
       material_keyword: materialFilter.materialKeyword || undefined,
       material_code: materialFilter.materialCode || undefined,
@@ -260,6 +273,7 @@ async function loadAllData() {
     const params = {
       current_year: currentYear.value,
       period: period.value,
+      compare_mode: compareMode.value,
       company_codes: orgFilter.companyCodes.length > 0 ? orgFilter.companyCodes : undefined,
       material_keyword: materialFilter.materialKeyword || undefined,
       material_code: materialFilter.materialCode || undefined,
@@ -288,6 +302,7 @@ async function doExport() {
     const params = {
       current_year: currentYear.value,
       period: period.value,
+      compare_mode: compareMode.value,
       company_codes: orgFilter.companyCodes.length > 0 ? orgFilter.companyCodes : undefined,
       material_keyword: materialFilter.materialKeyword || undefined,
       material_code: materialFilter.materialCode || undefined,
@@ -299,7 +314,7 @@ async function doExport() {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `采购同期对比分析_${currentYear.value}年1-${period.value}月vs${currentYear.value-1}年.xlsx`
+    link.download = `采购同期对比分析_${currentYear.value}年1-${period.value}月vs${prevPeriodLabel.value}.xlsx`
     link.click()
     window.URL.revokeObjectURL(url)
     ElMessage.success('导出成功')

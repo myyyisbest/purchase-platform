@@ -24,6 +24,98 @@
       </div>
     </div>
 
+    <!-- 预警生命周期汇总 -->
+    <div class="alert-summary-row">
+      <div class="alert-kpi open">
+        <div class="alert-kpi-label">待处理预警</div>
+        <div class="alert-kpi-value">{{ alertSummary.open }}</div>
+      </div>
+      <div class="alert-kpi acked">
+        <div class="alert-kpi-label">已确认</div>
+        <div class="alert-kpi-value">{{ alertSummary.acknowledged }}</div>
+      </div>
+      <div class="alert-kpi resolved">
+        <div class="alert-kpi-label">已关闭</div>
+        <div class="alert-kpi-value">{{ alertSummary.resolved }}</div>
+      </div>
+      <div class="alert-kpi total">
+        <div class="alert-kpi-label">合计</div>
+        <div class="alert-kpi-value">{{ alertSummary.total }}</div>
+      </div>
+      <div class="alert-actions" v-if="isAdmin">
+        <el-button type="warning" :loading="scanning" @click="handleScan">重新扫描预警</el-button>
+      </div>
+    </div>
+
+    <!-- 开放预警列表 -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>开放预警列表</h3>
+        <span class="sub">状态：{{ alertStatusFilter === 'open' ? '待处理' : alertStatusFilter }}</span>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <el-select v-model="alertStatusFilter" size="small" style="width:120px" @change="loadAlerts">
+            <el-option label="待处理" value="open" />
+            <el-option label="已确认" value="acknowledged" />
+            <el-option label="已关闭" value="resolved" />
+            <el-option label="全部" value="" />
+          </el-select>
+          <el-input v-model="alertKeyword" size="small" clearable placeholder="物料/标题关键词" style="width:180px" @keyup.enter="loadAlerts" />
+          <el-button size="small" @click="loadAlerts">查询</el-button>
+        </div>
+      </div>
+      <el-table :data="alertList" stripe size="small" max-height="360" v-loading="alertLoading">
+        <el-table-column type="index" label="#" width="50" align="center" />
+        <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
+        <el-table-column label="类型" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.alert_type === 'single_source' ? 'danger' : 'warning'">
+              {{ row.alert_type === 'single_source' ? '单源供应' : '单价波动' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="物料" width="120">
+          <template #default="{ row }">{{ stripLeadingZeros(row.material_code) }}</template>
+        </el-table-column>
+        <el-table-column prop="severity" label="级别" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.severity === 'high' ? 'danger' : (row.severity === 'medium' ? 'warning' : 'info')" effect="dark">
+              {{ { high: '高', medium: '中', low: '低' }[row.severity] || row.severity }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="metric_value" label="指标值" width="100" align="right">
+          <template #default="{ row }">
+            {{ row.alert_type === 'price_volatility' ? (row.metric_value?.toFixed(1) + '%') : formatMoney(row.metric_value) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.status === 'open' ? 'danger' : (row.status === 'acknowledged' ? 'warning' : 'success')">
+              {{ { open: '待处理', acknowledged: '已确认', resolved: '已关闭' }[row.status] }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 'open'" size="small" type="primary" link @click="doAcknowledge(row)">确认</el-button>
+            <el-button v-if="row.status !== 'resolved'" size="small" type="success" link @click="doResolve(row)">关闭</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end">
+        <el-pagination
+          v-model:current-page="alertPage"
+          v-model:page-size="alertPageSize"
+          :total="alertTotal"
+          layout="total, prev, pager, next"
+          background
+          small
+          @current-change="loadAlerts"
+        />
+      </div>
+    </div>
+
+
     <!-- 单源供应风险清单 -->
     <div class="chart-card" v-if="singleSourceRisk.length > 0">
       <div class="chart-header">
@@ -129,6 +221,14 @@ import { Refresh, CaretTop, CaretBottom, Download, Warning } from '@element-plus
 import { getYears } from '../api/yoy'
 import { getSingleSourceRisk, getPriceVolatility } from '../api/dashboard'
 import { exportSingleSourceRiskExcel } from '../api/dashboard'
+import {
+  listAnomalyAlerts,
+  getAnomalyAlertSummary,
+  scanAnomalyAlerts,
+  acknowledgeAnomalyAlert,
+  resolveAnomalyAlert,
+} from '../api/anomalyAlert'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import OrgFilter from '../components/OrgFilter.vue'
 import MaterialFilter from '../components/MaterialFilter.vue'
 import { stripLeadingZeros } from '../utils/format'
@@ -175,6 +275,104 @@ function onMaterialFilterChange(payload) {
   loadData()
 }
 
+
+// 预警生命周期
+const isAdmin = ref(false)
+try {
+  const u = JSON.parse(localStorage.getItem('pp_user') || '{}')
+  isAdmin.value = u.role === 'admin'
+} catch { /* ignore */ }
+const alertSummary = ref({ open: 0, acknowledged: 0, resolved: 0, total: 0 })
+const alertList = ref([])
+const alertLoading = ref(false)
+const alertStatusFilter = ref('open')
+const alertKeyword = ref('')
+const alertPage = ref(1)
+const alertPageSize = ref(20)
+const alertTotal = ref(0)
+const scanning = ref(false)
+
+async function loadAlertSummary() {
+  try {
+    const params = {}
+    if (fiscalYear.value) params.fiscal_year = fiscalYear.value
+    if (orgFilter.companyCodes.length) params.company_codes = orgFilter.companyCodes
+    alertSummary.value = await getAnomalyAlertSummary(params) || { open: 0, acknowledged: 0, resolved: 0, total: 0 }
+  } catch (e) {
+    console.error('加载预警汇总失败', e)
+  }
+}
+
+async function loadAlerts() {
+  alertLoading.value = true
+  try {
+    const params = {
+      page: alertPage.value,
+      page_size: alertPageSize.value,
+    }
+    if (alertStatusFilter.value) params.status = alertStatusFilter.value
+    if (fiscalYear.value) params.fiscal_year = fiscalYear.value
+    if (alertKeyword.value) params.keyword = alertKeyword.value
+    if (orgFilter.companyCodes.length) params.company_codes = orgFilter.companyCodes
+    const res = await listAnomalyAlerts(params)
+    alertList.value = res?.items || []
+    alertTotal.value = res?.total || 0
+  } catch (e) {
+    console.error('加载预警列表失败', e)
+  } finally {
+    alertLoading.value = false
+  }
+}
+
+async function handleScan() {
+  if (!fiscalYear.value) {
+    ElMessage.warning('请先选择财年')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `将对 ${fiscalYear.value} 年数据重新扫描单源供应与单价波动预警，是否继续？`,
+      '重新扫描预警',
+      { type: 'warning' }
+    )
+  } catch { return }
+  scanning.value = true
+  try {
+    const stats = await scanAnomalyAlerts({
+      fiscalYear: fiscalYear.value,
+      companyCodes: orgFilter.companyCodes.length ? orgFilter.companyCodes : undefined,
+      volatilityThreshold: volatilityThreshold.value,
+    })
+    ElMessage.success(`扫描完成：新增 ${stats.created}，更新 ${stats.updated}，跳过 ${stats.skipped}`)
+    await Promise.all([loadAlertSummary(), loadAlerts()])
+  } catch (e) {
+    ElMessage.error('扫描失败')
+    console.error(e)
+  } finally {
+    scanning.value = false
+  }
+}
+
+async function doAcknowledge(row) {
+  try {
+    await acknowledgeAnomalyAlert(row.id)
+    ElMessage.success('已确认')
+    await Promise.all([loadAlertSummary(), loadAlerts()])
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
+}
+
+async function doResolve(row) {
+  try {
+    await resolveAnomalyAlert(row.id)
+    ElMessage.success('已关闭')
+    await Promise.all([loadAlertSummary(), loadAlerts()])
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
+}
+
 // 根据阈值过滤后的波动数据
 const filteredVolatility = computed(() => {
   const threshold = volatilityThreshold.value
@@ -198,7 +396,7 @@ async function loadData() {
   try {
     const filters = buildFilters()
 
-    // 并行加载单源风险和单价波动
+    // 并行加载单源风险、单价波动与预警
     const [riskRes, volRes] = await Promise.allSettled([
       getSingleSourceRisk(filters, 50),
       getPriceVolatility(filters, 200)
@@ -208,6 +406,7 @@ async function loadData() {
     priceVolatility.value = volRes.status === 'fulfilled'
       ? (volRes.value || []).map(p => ({ ...p, change_rate_abs: Math.abs(p.change_rate) }))
       : []
+    await Promise.all([loadAlertSummary(), loadAlerts()])
   } catch (e) {
     console.error('加载异常监测数据失败:', e)
   } finally {
@@ -355,4 +554,27 @@ function formatNum(v) {
 }
 .change-cell.up { color: #f56c6c; }
 .change-cell.down { color: #67c23a; }
+
+.alert-summary-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.alert-kpi {
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px 20px;
+  min-width: 120px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  flex: 1;
+}
+.alert-kpi-label { font-size: 12px; color: #909399; }
+.alert-kpi-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+.alert-kpi.open .alert-kpi-value { color: #f56c6c; }
+.alert-kpi.acked .alert-kpi-value { color: #e6a23c; }
+.alert-kpi.resolved .alert-kpi-value { color: #67c23a; }
+.alert-kpi.total .alert-kpi-value { color: #409eff; }
+.alert-actions { display: flex; align-items: center; }
 </style>

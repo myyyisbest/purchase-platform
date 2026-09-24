@@ -27,6 +27,7 @@
             <el-menu-item index="/purchase-anomaly">
               <el-icon><WarningFilled /></el-icon>
               <span>采购异常监测</span>
+              <el-badge v-if="anomalyOpenCount > 0" :value="anomalyOpenCount" :max="99" class="menu-badge" />
             </el-menu-item>
             
             <el-menu-item index="/price-trend">
@@ -42,6 +43,11 @@
             <el-menu-item index="/purchase-records">
               <el-icon><List /></el-icon>
               <span>采购记录明细</span>
+            </el-menu-item>
+
+            <el-menu-item index="/suppliers">
+              <el-icon><Van /></el-icon>
+              <span>供应商管理</span>
             </el-menu-item>
             
             <el-menu-item index="/material-major-category">
@@ -74,6 +80,16 @@
               <el-menu-item index="/data-import">
                 <el-icon><Upload /></el-icon>
                 <span>数据导入</span>
+              </el-menu-item>
+
+              <el-menu-item index="/hana-sync">
+                <el-icon><Connection /></el-icon>
+                <span>HANA 同步</span>
+              </el-menu-item>
+
+              <el-menu-item index="/audit-logs">
+                <el-icon><Document /></el-icon>
+                <span>审计日志</span>
               </el-menu-item>
             </template>
           </el-menu>
@@ -116,9 +132,10 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { getAnomalyAlertSummary } from './api/anomalyAlert'
 import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, DataAnalysis, Money, OfficeBuilding, ChatDotRound, User, ArrowDown, Files, UserFilled, WarningFilled, Upload, List, Connection, Van, Document } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -140,16 +157,34 @@ function loadUserInfo() {
   }
 }
 
+
 const isAdmin = computed(() => userRole.value === 'admin')
 const displayName = computed(() => userName.value || '用户')
+const anomalyOpenCount = ref(0)
+
+async function refreshAnomalyBadge() {
+  const token = localStorage.getItem('pp_token')
+  if (!token) {
+    anomalyOpenCount.value = 0
+    return
+  }
+  try {
+    const res = await getAnomalyAlertSummary()
+    anomalyOpenCount.value = res?.open || 0
+  } catch {
+    anomalyOpenCount.value = 0
+  }
+}
 
 onMounted(() => {
   loadUserInfo()
+  refreshAnomalyBadge()
 })
 
 // 监听路由变化，刷新用户信息
 watch(() => route.path, () => {
   loadUserInfo()
+  refreshAnomalyBadge()
 })
 
 function handleLogout() {
@@ -229,5 +264,12 @@ html, body, #app {
   background-color: #f0f2f5;
   padding: 20px;
   overflow-y: auto;
+}
+
+.menu-badge {
+  margin-left: 8px;
+}
+.menu-badge ::v-deep(.el-badge__content) {
+  transform: translateY(-2px);
 }
 </style>

@@ -8,6 +8,7 @@ JWT Token + bcrypt 密码哈希 + FastAPI Depends
 - 所有时间统一使用东八区（UTC+8）时区感知对象，避免 utcnow 与本地时间混用
 """
 import os
+import hmac
 import time
 import threading
 import logging
@@ -16,7 +17,7 @@ from typing import Optional, List
 
 import jwt
 from passlib.hash import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -211,3 +212,71 @@ def get_effective_company_codes(
         return effective
 
     return user_codes
+
+
+# ============ Cron / 管理员双通道鉴权 ============
+
+# 定时任务专用 Token（空则 cron 头鉴权失败关闭）
+CRON_API_TOKEN = os.getenv("CRON_API_TOKEN") or os.getenv("HANA_SYNC_CRON_TOKEN") or ""
+
+
+def _extract_cron_token(request: Request) -> Optional[str]:
+    """从 X-Cron-Token 或 Authorization: Bearer 提取 cron token"""
+    header = request.headers.get("X-Cron-Token")
+    if header:
+        return header.strip()
+    auth_header = request.headers.get("Authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    return None
+
+
+def require_admin_or_cron(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    允许 JWT 管理员 或 合法 Cron Token 访问。
+    - Cron：仅当 CRON_API_TOKEN / HANA_SYNC_CRON_TOKEN 非空，且与头匹配（常量时间比较）
+    - 否则回退 require_admin JWT
+    返回 User（JWT 路径）或 None（cron 路径）
+    """
+    token = _extract_cron_token(request)
+    configured = CRON_API_TOKEN
+    # 若请求显式带了 X-Cron-Token，优先走 cron 通道（未配置则失败关闭）
+    if request.headers.get("X-Cron-Token") is not None:
+        if not configured:
+            raise HTTPException(status_code=401, detail="Cron Token 未配置，拒绝访问")
+        if not token or not hmac.compare_digest(token, configured):
+            raise HTTPException(status_code=401, detail="无效的 Cron Token")
+        return None  # cron 身份，无 User
+
+    # 否则走 JWT admin
+    if credentials is None:
+        # 也允许 Authorization: Bearer <cron_token>（无 JWT 时）
+        if configured and token and hmac.compare_digest(token, configured):
+            return None
+        raise HTTPException(status_code=401, detail="未提供认证凭证")
+
+    # 先尝试 JWT
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if user_id is not None:
+            user = db.query(User).filter(User.id == int(user_id)).first()
+            if user and user.is_active:
+                if user.role != "admin":
+                    raise HTTPException(status_code=403, detail="需要管理员权限")
+                return user
+    except HTTPException:
+        # JWT 无效时，若 Bearer 恰好是 cron token 也可放行
+        if configured and hmac.compare_digest(credentials.credentials, configured):
+            return None
+        raise
+
+    # JWT 解析失败但 Bearer 是 cron token
+    if configured and hmac.compare_digest(credentials.credentials, configured):
+        return None
+    raise HTTPException(status_code=401, detail="无效的认证令牌")
+

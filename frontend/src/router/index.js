@@ -73,10 +73,28 @@ const routes = [
     meta: { title: '采购记录明细' }
   },
   {
+    path: '/suppliers',
+    name: 'Suppliers',
+    component: () => import('../views/Suppliers.vue'),
+    meta: { title: '供应商管理' }
+  },
+  {
     path: '/data-import',
     name: 'DataImport',
     component: () => import('../views/DataImport.vue'),
     meta: { title: '数据导入', requiresAdmin: true }
+  },
+  {
+    path: '/hana-sync',
+    name: 'HanaSync',
+    component: () => import('../views/HanaSync.vue'),
+    meta: { title: 'HANA 同步', requiresAdmin: true }
+  },
+  {
+    path: '/audit-logs',
+    name: 'AuditLogs',
+    component: () => import('../views/AuditLogs.vue'),
+    meta: { title: '审计日志', requiresAdmin: true }
   },
   {
     path: '/ai-assistant',

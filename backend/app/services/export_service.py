@@ -22,7 +22,8 @@ class ExportService:
         items: List[dict],
         current_year: int,
         period: int,
-        company_name: Optional[str] = None
+        company_name: Optional[str] = None,
+        compare_mode: str = "same_period",
     ) -> StreamingResponse:
         """
         生成同期对比分析的Excel文件
@@ -30,9 +31,14 @@ class ExportService:
         表头设计（参考 purchase analysis 的双行表头）：
         - 固定列：公司代码、公司名称、物料代码、物料名称
         - 当年累计组：金额(CNY)、数量、平均单价
-        - 上年全年组：金额(CNY)、数量、平均单价
+        - 上年同期/全年组：金额(CNY)、数量、平均单价
         - 同比分析组：单价变动、变动率(%)、成本变动(CNY)
         """
+        prev_label = (
+            f'{current_year-1}年1-{period}月'
+            if compare_mode != "full_year"
+            else f'{current_year-1}年全年'
+        )
         # 构建DataFrame
         rows = []
         for item in items:
@@ -44,9 +50,9 @@ class ExportService:
                 f'{current_year}年1-{period}月金额(CNY)': item['current_amount'],
                 f'{current_year}年1-{period}月数量': item['current_qty'],
                 f'{current_year}年1-{period}月平均单价': item['current_avg_price'],
-                f'{current_year-1}年全年金额(CNY)': item['prev_amount'],
-                f'{current_year-1}年全年数量': item['prev_qty'],
-                f'{current_year-1}年全年平均单价': item['prev_avg_price'],
+                f'{prev_label}金额(CNY)': item['prev_amount'],
+                f'{prev_label}数量': item['prev_qty'],
+                f'{prev_label}平均单价': item['prev_avg_price'],
                 '单价变动(CNY)': item['price_change'],
                 '变动率(%)': item['price_change_rate'],
                 '成本变动(CNY)': item['cost_change'],
@@ -75,7 +81,8 @@ class ExportService:
         output.seek(0)
 
         # 生成文件名
-        filename = f"采购同期对比分析_{current_year}年1-{period}月vs{current_year-1}年"
+        prev_tag = f"1-{period}月" if compare_mode != "full_year" else "全年"
+        filename = f"采购同期对比分析_{current_year}年1-{period}月vs{current_year-1}年{prev_tag}"
         if company_name:
             filename += f"_({company_name})"
         filename += f"_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx"
